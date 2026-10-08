@@ -1,0 +1,163 @@
+version: '3.8'
+
+services:
+  postgres-db:
+    image: postgres:15-alpine
+    container_name: postgres-db_prod
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    # Security: No ports mapped to host. Only accessible within Docker network.
+    volumes:
+      - ./database/init-docker.sql:/docker-entrypoint-initdb.d/init.sql
+      - postgres_prod_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME} -d ${DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - backend-network
+
+  kafka:
+    image: apache/kafka:3.7.0
+    container_name: kafka_prod
+    restart: always
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://:29092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka_prod:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      CLUSTER_ID: '4L6g3nShT-eMCtK--X86sw'
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+    # Security: No ports mapped to host.
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:29092"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - backend-network
+
+  api-gateway:
+    image: ${DOCKER_REGISTRY:-ghcr.io/yourusername}/api-gateway:latest
+    container_name: api-gateway_prod
+    restart: always
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+    ports:
+      # Expose only to localhost for Nginx reverse proxy to route traffic
+      - "127.0.0.1:8686:8686"
+    networks:
+      - backend-network
+    depends_on:
+      - users-service
+      - artists-service
+      - admin-service
+      - catalog-service
+
+  users-service:
+    image: ${DOCKER_REGISTRY:-ghcr.io/yourusername}/users-service:latest
+    container_name: users-service_prod
+    restart: always
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - DB_URL=jdbc:postgresql://postgres-db_prod:5432/${DB_NAME}?currentSchema=mc_music_users_schema
+      - DB_USERNAME=${DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - KAFKA_SERVERS=kafka_prod:29092
+      - JWT_SECRET=${JWT_SECRET}
+      - INTERNAL_API_SECRET=${INTERNAL_API_SECRET}
+      - CATALOG_SERVICE_URL=http://catalog-service_prod:8081
+      - ARTIST_SERVICE_URL=http://artists-service_prod:8083
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks:
+      - backend-network
+
+  catalog-service:
+    image: ${DOCKER_REGISTRY:-ghcr.io/yourusername}/catalog-service:latest
+    container_name: catalog-service_prod
+    restart: always
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - DB_URL=jdbc:postgresql://postgres-db_prod:5432/${DB_NAME}?currentSchema=mc_music_catalog_schema
+      - DB_USERNAME=${DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - KAFKA_SERVERS=kafka_prod:29092
+      - ARTISTS_SERVICE_URL=http://artists-service_prod:8083
+      - CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME}
+      - CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY}
+      - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET}
+      - JWT_SECRET_USER=${JWT_SECRET}
+      - JWT_SECRET_ARTIST=${JWT_SECRET}
+      - JWT_SECRET_ADMIN=${JWT_SECRET}
+      - INTERNAL_API_SECRET=${INTERNAL_API_SECRET}
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks:
+      - backend-network
+
+  artists-service:
+    image: ${DOCKER_REGISTRY:-ghcr.io/yourusername}/artists-service:latest
+    container_name: artists-service_prod
+    restart: always
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - DB_URL=jdbc:postgresql://postgres-db_prod:5432/${DB_NAME}?currentSchema=mc_music_artists_schema
+      - DB_USERNAME=${DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - KAFKA_SERVERS=kafka_prod:29092
+      - CATALOG_SERVICE_URL=http://catalog-service_prod:8081
+      - CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME}
+      - CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY}
+      - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET}
+      - JWT_SECRET=${JWT_SECRET}
+      - INTERNAL_API_SECRET=${INTERNAL_API_SECRET}
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks:
+      - backend-network
+
+  admin-service:
+    image: ${DOCKER_REGISTRY:-ghcr.io/yourusername}/admin-service:latest
+    container_name: admin-service_prod
+    restart: always
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - DB_URL=jdbc:postgresql://postgres-db_prod:5432/${DB_NAME}?currentSchema=mc_music_admin_schema
+      - DB_USERNAME=${DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - USERS_SERVICE_URL=http://users-service_prod:8082
+      - ARTISTS_SERVICE_URL=http://artists-service_prod:8083
+      - JWT_SECRET=${JWT_SECRET}
+      - INTERNAL_API_SECRET=${INTERNAL_API_SECRET}
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+    networks:
+      - backend-network
+
+networks:
+  backend-network:
+    driver: bridge
+
+volumes:
+  postgres_prod_data:
