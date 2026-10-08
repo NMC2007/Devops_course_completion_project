@@ -63,7 +63,7 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=docker
     ports:
-      - "8687:8686" # Đã đổi cổng ra ngoài là 8687 để tránh xung đột
+      - "8686:8686" # Đã đổi cổng ra ngoài là 8687 để tránh xung đột
     networks:
       - mc_music_network
     depends_on:

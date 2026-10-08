@@ -1,0 +1,17 @@
+global:
+  scrape_interval: 15s # Chu kỳ quét metrics 15s/lần
+
+scrape_configs:
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  - job_name: 'mcmusic-microservices'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets:
+        - 'api-gateway:8686'
+        - 'users-service:8082'
+        - 'artists-service:8083'
+        - 'catalog-service:8081'
+        - 'admin-service:8084'
