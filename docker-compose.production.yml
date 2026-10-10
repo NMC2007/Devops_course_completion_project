@@ -70,14 +70,14 @@ services:
     restart: always
     environment:
       - SPRING_PROFILES_ACTIVE=docker
-      - DB_URL=jdbc:postgresql://postgres-db_prod:5432/${DB_NAME}?currentSchema=mc_music_users_schema
+      - DB_URL=jdbc:postgresql://postgres-db:5432/${DB_NAME}?currentSchema=mc_music_users_schema
       - DB_USERNAME=${DB_USERNAME}
       - DB_PASSWORD=${DB_PASSWORD}
-      - KAFKA_SERVERS=kafka_prod:29092
+      - KAFKA_SERVERS=kafka:29092
       - JWT_SECRET=${JWT_SECRET}
       - INTERNAL_API_SECRET=${INTERNAL_API_SECRET}
-      - CATALOG_SERVICE_URL=http://catalog-service_prod:8081
-      - ARTIST_SERVICE_URL=http://artists-service_prod:8083
+      - CATALOG_SERVICE_URL=http://catalog-service:8081
+      - ARTIST_SERVICE_URL=http://artists-service:8083
     depends_on:
       postgres-db:
         condition: service_healthy
@@ -92,11 +92,11 @@ services:
     restart: always
     environment:
       - SPRING_PROFILES_ACTIVE=docker
-      - DB_URL=jdbc:postgresql://postgres-db_prod:5432/${DB_NAME}?currentSchema=mc_music_catalog_schema
+      - DB_URL=jdbc:postgresql://postgres-db:5432/${DB_NAME}?currentSchema=mc_music_catalog_schema
       - DB_USERNAME=${DB_USERNAME}
       - DB_PASSWORD=${DB_PASSWORD}
-      - KAFKA_SERVERS=kafka_prod:29092
-      - ARTISTS_SERVICE_URL=http://artists-service_prod:8083
+      - KAFKA_SERVERS=kafka:29092
+      - ARTISTS_SERVICE_URL=http://artists-service:8083
       - CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME}
       - CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY}
       - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET}
@@ -118,11 +118,11 @@ services:
     restart: always
     environment:
       - SPRING_PROFILES_ACTIVE=docker
-      - DB_URL=jdbc:postgresql://postgres-db_prod:5432/${DB_NAME}?currentSchema=mc_music_artists_schema
+      - DB_URL=jdbc:postgresql://postgres-db:5432/${DB_NAME}?currentSchema=mc_music_artists_schema
       - DB_USERNAME=${DB_USERNAME}
       - DB_PASSWORD=${DB_PASSWORD}
-      - KAFKA_SERVERS=kafka_prod:29092
-      - CATALOG_SERVICE_URL=http://catalog-service_prod:8081
+      - KAFKA_SERVERS=kafka:29092
+      - CATALOG_SERVICE_URL=http://catalog-service:8081
       - CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME}
       - CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY}
       - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET}
@@ -142,11 +142,11 @@ services:
     restart: always
     environment:
       - SPRING_PROFILES_ACTIVE=docker
-      - DB_URL=jdbc:postgresql://postgres-db_prod:5432/${DB_NAME}?currentSchema=mc_music_admin_schema
+      - DB_URL=jdbc:postgresql://postgres-db:5432/${DB_NAME}?currentSchema=mc_music_admin_schema
       - DB_USERNAME=${DB_USERNAME}
       - DB_PASSWORD=${DB_PASSWORD}
-      - USERS_SERVICE_URL=http://users-service_prod:8082
-      - ARTISTS_SERVICE_URL=http://artists-service_prod:8083
+      - USERS_SERVICE_URL=http://users-service:8082
+      - ARTISTS_SERVICE_URL=http://artists-service:8083
       - JWT_SECRET=${JWT_SECRET}
       - INTERNAL_API_SECRET=${INTERNAL_API_SECRET}
     depends_on:
